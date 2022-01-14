@@ -1,0 +1,35 @@
+---
+- name: Create a sandbox instance
+  hosts: localhost
+  become: false
+  gather_facts: false
+  tags: launch
+  tasks:
+  - name: Launch instance
+    amazon.aws.ec2_instance:
+      name: "{{ inst_name }}"
+      key_name: "{{ keypair }}"
+      security_group: "{{ security_group }}"
+      instance_type: "{{ instance_type }}"
+      image_id: "{{ image_id }}"
+      wait: yes
+      state: started
+      region: "{{ region }}"
+      vpc_subnet_id: "{{ vpc_subnet_id }}"
+      network:
+        assign_public_ip: yes
+      tags:
+         Environment: Testing
+    register: ec2
+
+  - name: Add new instance to host group
+    add_host:
+      hostname: "{{ item.public_ip_address }}"
+      groupname: aws_launched
+    loop: "{{ ec2.instances }}"
+
+- name: Configure instance(s)
+  hosts: aws_launched
+  gather_facts: true
+  roles:
+    - dev

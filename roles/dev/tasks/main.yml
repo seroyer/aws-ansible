@@ -1,0 +1,34 @@
+---
+
+- name: Register and attach to pool
+  become: yes
+  redhat_subscription:
+    state: present
+    username: "{{ rhsm_user }}"
+    password: "{{ rhsm_password }}"
+    pool_ids: "{{ rhsm_pool_id }}"
+
+- name: upgrade all packages
+  become: yes
+  dnf:
+    name: "*"
+    state: latest
+
+- name: install podman
+  become: yes
+  dnf:
+    name: "podman"
+    state: latest
+
+- name: get beta workaround
+  become: yes
+  get_url: 
+    url: https://www.redhat.com/security/data/f21541eb.txt
+    dest: /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-beta
+
+- name: apply beta workaround
+  become: yes
+  command: podman image trust set -f /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-beta {{ item[0] }}/{{ item[1] }}
+  with_nested:
+    - [ 'registry.access.redhat.com', 'registry.redhat.io' ]
+    - [ 'ubi9-beta', 'rhel9-beta' ]
